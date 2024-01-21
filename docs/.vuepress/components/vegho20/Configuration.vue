@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onBeforeMount } from 'vue';
 import { useVeSystem } from '../../providers/veSystem';
 import { VeSystem, secondsToDate } from '../../utils';
 import { useWeb3ModalProvider } from '@web3modal/ethers/vue';
@@ -28,6 +28,7 @@ const {
   selected: veSystem,
   select: selectVeSystem,
   data: veSystems,
+  fetch,
 } = useVeSystem();
 const {
   createLock,
@@ -37,10 +38,15 @@ const {
   withdrawEarly,
   increaseLockAmount,
   increaseLockTime,
+  claimExternalRewards,
 } = useController({
   walletProvider,
   network,
   veSystem,
+});
+
+onBeforeMount(() => {
+  fetch();
 });
 
 const { allowance, approve } = useTokenController({
@@ -146,6 +152,7 @@ const isLoadingLock = ref<boolean>(false);
 const isLoadingApprove = ref<boolean>(false);
 const isLoadingWithdraw = ref<boolean>(false);
 const isLoadingClaim = ref<boolean>(false);
+const isLoadingClaimExternalRewards = ref<boolean>(false);
 
 const isLockModalOpen = ref<boolean>(false);
 const isIncreaseLockModalOpen = ref<boolean>(false);
@@ -231,6 +238,26 @@ const handleWithdraw = async () => {
     onError: err => {
       console.log('err', err);
       isLoadingWithdraw.value = false;
+    },
+  });
+};
+
+const handleClaimExternalRewards = async () => {
+  await claimExternalRewards.value?.({
+    onPrompt: () => {
+      console.log('onPrompt');
+    },
+    onSubmitted: ({ tx }) => {
+      console.log('onSubmitted', tx);
+      isLoadingClaimExternalRewards.value = true;
+    },
+    onSuccess: async ({ receipt }) => {
+      console.log('onSuccess', receipt);
+      isLoadingClaimExternalRewards.value = false;
+    },
+    onError: err => {
+      console.log('err', err);
+      isLoadingClaimExternalRewards.value = false;
     },
   });
 };
@@ -448,11 +475,12 @@ const searchTokens = text => {
   );
 };
 const onTokenInChange = value => {
-  console.log(value);
+  console.log(value.address);
   selectedPool.value = value;
   // bptAddress.value = value.address;
-  const _veSystem = veSystems.value.find(x => x.bptToken === value);
-
+  console.log(veSystems.value)
+  const _veSystem = veSystems.value.find(x => x.bptToken === value.address);
+  console.log(_veSystem)
   if (!_veSystem) return;
 
   selectVeSystem(_veSystem.id);
@@ -588,6 +616,15 @@ const onTokenInChange = value => {
             @click="handleEarlyWithdrawModalOpen"
           >
             {{ isLoadingWithdraw ? 'Withdrawing...' : 'Early Withdraw' }}
+          </button>
+        </div>
+        <div>
+          <button
+            class="btn"
+            :disabled="isLoadingClaim"
+            @click="handleClaimExternalRewards"
+          >
+            {{ isLoadingClaim ? 'Claiming...' : 'Claim External Rewards' }}
           </button>
         </div>
         <div>
