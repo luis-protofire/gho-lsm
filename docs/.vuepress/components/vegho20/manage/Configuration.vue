@@ -10,10 +10,19 @@ import { useWeb3ModalProvider } from '@web3modal/ethers/vue';
 import { useNetwork } from '../../../providers/network';
 import { useController } from '../../../utils/VotingEscrowController';
 import { ethers } from 'ethers';
+import { Select, SelectTrigger, SelectOptions } from '../../Select';
+import Tooltip from '../Tooltip.vue';
 
+import { usePools } from '../../../providers/pools';
+
+const { pools, isLoading: isLoadingPools } = usePools();
 const { walletProvider } = useWeb3ModalProvider();
 const { network } = useNetwork();
-const { selected: veSystem } = useVeSystem();
+const {
+  selected: veSystem,
+  data: veSystems,
+  select: selectVeSystem,
+} = useVeSystem();
 const {
   allUnlock,
   setAllUnlock,
@@ -166,32 +175,29 @@ const formFields = computed(() => {
 
   return [
     {
-      label: 'Underlying 8020 BPT address',
-      placeholder: 'B-GNO80-WETH20',
+      label: 'Underlying ve8020GHO BPT address',
       name: 'bptAddress',
       value: veSystem.value?.bptToken,
     },
     {
       label: 'veToken Name',
-      placeholder: 'Voting Escrow Balancer 80 GNO',
       name: 'veTokenName',
       value: veSystem.value?.votingEscrow.name,
     },
     {
       label: 'veToken Symbol',
-      placeholder: 'veGNO80-WETH20',
       name: 'veTokenSymbol',
       value: veSystem.value?.votingEscrow.symbol,
     },
     {
       label: 'veGHO20 Factory',
-      placeholder: '0x67c3...9a65c',
       name: 'factoryUsed',
-      value: CONFIG.get(network.value.id)?.LAUNCHPAD_CONTRACT,
+      value: network.value
+        ? CONFIG.get(network.value.id)?.LAUNCHPAD_CONTRACT
+        : '',
     },
     {
       label: 'Rewards Distribution Address',
-      placeholder: '0x67c3...9a65c',
       name: 'rewardsAddress',
       value: veSystem.value?.rewardDistributorAddress,
     },
@@ -203,23 +209,92 @@ const formFields = computed(() => {
     },
     {
       label: '% of BPT supply locked',
-      placeholder: '37%',
       name: 'supplyVested',
       value: supplyVested.toString().concat('%'),
     },
     {
       label: 'Rewards Distribution Admin',
-      placeholder: '0xb76f3...987b5',
       name: 'rewardsDistribution',
       value: veSystem.value?.admin,
     },
   ];
 });
+
+watch(pools, value => {
+  filteredPools.value = value;
+});
+
+const filteredPools = ref();
+
+const selectedPool = ref({});
+
+const searchTokens = text => {
+  filteredPools.value = pools.value.filter(
+    x =>
+      x.symbol.toLowerCase().includes(text.toLowerCase()) ||
+      x.address.toLowerCase() === text.toLowerCase()
+  );
+};
+const onTokenInChange = value => {
+  console.log(value);
+  selectedPool.value = value;
+  // bptAddress.value = value.address;
+  const _veSystem = veSystems.value.find(x => x.bptToken === value);
+
+  if (!_veSystem) return;
+
+  selectVeSystem(_veSystem.id);
+};
 </script>
 
 <template>
   <main class="section-container">
     <section class="section-body">
+      <div key="pool-selector" class="item-row">
+        <p class="item-name">Select ve8020GHO BPT address</p>
+        <div class="input-group custom-group">
+          <Select :onChange="onTokenInChange" :value="selectedPool">
+            <SelectTrigger
+              :value="selectedPool.address"
+              placeholder="Select Pool"
+            >
+              <Avatar
+                :address="selectedPool.address"
+                :imageURL="selectedPool.logoURI"
+                :size="20"
+              />
+              <span>{{ selectedPool.symbol }}</span>
+            </SelectTrigger>
+            <SelectOptions
+              v-slot="pool"
+              :options="filteredPools"
+              optionKey="address"
+              :searchFn="searchTokens"
+            >
+              <Avatar
+                :address="pool.address"
+                :imageURL="pool.logoURI"
+                :size="20"
+              />
+              <span>{{ pool.symbol }}</span>
+            </SelectOptions>
+          </Select>
+        </div>
+      </div>
+      <div key="selected-ve-system" class="item-row">
+        <p class="item-name">veSystem</p>
+        <div class="input-group">
+          <span v-if="veSystem">{{ veSystem.id }}</span>
+          <span
+            v-if="Object.keys(selectedPool).length > 0 && !veSystem"
+            class="warning"
+            >This Balancer Pool does not yet have a veGHO20 Voting Escrow System
+            deployed yet. Please go to
+            <a href="/vegho20/for-crypto-projects/step-2.html">Step 2</a> to
+            deploy it.</span
+          >
+        </div>
+      </div>
       <div v-for="field in formFields" :key="field.label" class="item-row">
         <p class="item-name">{{ field.label }}</p>
         <div class="input-group">
@@ -239,7 +314,24 @@ const formFields = computed(() => {
             :onClose="handleUnlockModalClose"
             :onUnlock="handleUnlock"
           />
-          <p>Status: {{ allUnlockStatus }}</p>
+          <p>
+            <Tooltip
+              tooltip="'Unclock All' can be called only once. After it contract becomes 90% useless
+
+What does it mean?
+Allows all users to withdraw their funds ahead of schedule. In case this option is activated, the contract effectively terminates (there is no turning back). New locks cannot be created.
+
+Why would someone use it? Example 1:
+The functionality can be useful, for example, if the owner has decided to terminate the reward program ahead of schedule.
+
+How does it work?
+Admin calls function set_all_unlock(), and afterwards all locks can be withdrawn before lock-finish time without any penalties
+What may remain?
+Users can withdraw their locks at any time since option is activated.
+Why does it becomes useless? In which way?"
+              >Status: {{ allUnlockStatus }}</Tooltip
+            >
+          </p>
           <button
             class="btn"
             :disabled="allUnlockStatus || isLoadingAllUnlock"
@@ -255,7 +347,13 @@ const formFields = computed(() => {
             :onUnlock="handleEarlyUnlock"
             :earlyUnlock="earlyUnlockStatus"
           />
-          <p>Status: {{ earlyUnlockStatus }}</p>
+          <p>
+            <Tooltip
+              tooltip="Early Unlock
+Admin can enable or disable early unlock at any time"
+              >Status: {{ earlyUnlockStatus }}</Tooltip
+            >
+          </p>
           <button
             class="btn"
             :disabled="isLoadingEarlyUnlock"
@@ -271,7 +369,40 @@ const formFields = computed(() => {
             :onSubmit="handleSetEarlyPenalty"
             :earlyPenalty="earlyPenalty"
           />
-          <p>Early Penalty: {{ earlyPenalty }}</p>
+          <p>
+            <Tooltip
+              tooltip="Early Penalty
+
+10
+The penalty coefficient indicating the penalty speed for early unlock. Must be between 0 and 50. Default value is 10 means that penalty has linear speed.
+
+If Early Penalty is set, can be it changed later, and if yes, by whom?
+
+Why would someone use it?
+
+How does it work? Lets review examples
+
+Example 1: Early Penalty is set to 10. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens. 
+
+Example 2: Early Penalty is set to 5. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens. 
+
+Example 3: Early Penalty is set to 0. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens. 
+
+Example 3: Early Penalty is set to 50. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens. 
+
+
+Example 3: Early Penalty is set to 0. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens. 
+
+Example 3: Early Penalty is set to 0. If user locked 1,000 tokens for 52 weeks (1 year). User wants to withdraw with penalty after 1 week, > she will withdraw ??? tokens. 
+If user withdraws after 36 weeks, she will withdraw ??? tokens."
+              >Early Penalty: {{ earlyPenalty }}</Tooltip
+            >
+          </p>
           <button
             class="btn"
             :disabled="isLoadingEarlyPenalty"
@@ -361,5 +492,25 @@ const formFields = computed(() => {
   cursor: not-allowed;
   background-color: rgba(56, 74, 255, 0.2);
   color: grey;
+}
+
+.select-pool {
+  flex: 1;
+}
+
+.select-pool ul {
+  width: 100%;
+}
+
+.input-group span.warning {
+  color: red;
+}
+
+.item-row .custom-group {
+  display: block;
+}
+
+.item-row .custom-group .select ul {
+  width: 100%;
 }
 </style>

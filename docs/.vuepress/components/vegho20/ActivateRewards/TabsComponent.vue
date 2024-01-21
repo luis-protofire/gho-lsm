@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import RewardsDistribution from './RewardsDistribution.vue';
+import FormOne from './FormOne.vue';
+import FormTwo from './FormTwo.vue';
+import FormThree from './FormThree.vue';
 import Wallet from '../../Navbar/Wallet.vue';
+import { useTabs, Tab } from '../../../providers/tabs';
+
+const { tab, select } = useTabs();
 </script>
 
 <template>
@@ -8,8 +13,37 @@ import Wallet from '../../Navbar/Wallet.vue';
     <Wallet />
   </div>
   <div class="main-container">
-    <div class="body-container">
-      <RewardsDistribution />
+    <div class="head-container">
+      <div
+        :class="{ tab: true, 'active-tab': tab === Tab.FORM_1 }"
+        @click="select(Tab.FORM_1)"
+      >
+        $25k BAL Rewards for ve8020GHO lockers
+      </div>
+      <div
+        :class="{ tab: true, 'active-tab': tab === Tab.FORM_2 }"
+        @click="select(Tab.FORM_2)"
+      >
+        BAL Gauge Rewards
+      </div>
+      <div
+        :class="{ tab: true, 'active-tab': tab === Tab.FORM_3 }"
+        @click="select(Tab.FORM_3)"
+      >
+        AAVE Rewards for ve8020GHO Lockers (stay tuned!)
+      </div>
+    </div>
+
+    <div v-show="tab === Tab.FORM_1" class="body-container">
+      <FormOne />
+    </div>
+
+    <div v-show="tab === Tab.FORM_2" class="body-container">
+      <FormTwo />
+    </div>
+
+    <div v-show="tab === Tab.FORM_3" class="body-container">
+      <FormThree />
     </div>
   </div>
 </template>

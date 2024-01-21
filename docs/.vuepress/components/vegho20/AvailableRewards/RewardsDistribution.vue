@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import SetAvailableRewardsForm from './SetAvailableRewardsForm.vue';
-import AddRewardsCurrentWeek from './AddRewardsCurrentWeek.vue';
-import AddRewardsNWeeks from './AddRewardsNWeeks.vue';
-import AddRewardsExactWeek from './AddRewardsExactWeek.vue';
 import { ref, computed, watch } from 'vue';
 import AvailableRewardsModal from './AvailableRewardsModal.vue';
 import { useVeSystem } from '../../../providers/veSystem';
@@ -113,11 +109,18 @@ watch(pools, value => {
         >
       </div>
     </div>
-    <SetAvailableRewardsForm />
-    <AddRewardsCurrentWeek />
-    <AddRewardsNWeeks />
-    <AddRewardsExactWeek />
   </div>
+  <div class="btn-group">
+    <button class="available-button" @click="handleOpenAvailableRewardsModal">
+      Available Rewards
+    </button>
+  </div>
+  <AvailableRewardsModal
+    :open="isModalOpen"
+    :onClose="handleCloseAvailableRewardsModal"
+    :rewards="availableRewards"
+  >
+  </AvailableRewardsModal>
 </template>
 
 <style scoped>

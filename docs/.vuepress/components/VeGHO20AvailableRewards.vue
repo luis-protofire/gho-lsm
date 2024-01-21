@@ -4,11 +4,14 @@ import { provideNetwork } from '../providers/network';
 import { provideVeSystem } from '../providers/veSystem';
 import { provideTabs, Tab } from '../providers/tabs';
 import { providePools } from '../providers/pools';
-import TabsComponent from './vegho20/admin/TabsComponent.vue';
+
+import TabsComponent from './vegho20/AvailableRewards/TabsComponent.vue';
 
 const NetworkProvider = createProviderComponent(() => provideNetwork());
 const VeSystemProvider = createProviderComponent(() => provideVeSystem());
-const TabsProvider = createProviderComponent(() => provideTabs(Tab.LAUNCHPAD));
+const TabsProvider = createProviderComponent(() =>
+  provideTabs(Tab.ADMIN_POOLS)
+);
 const GlobalProvider = createProviderComponent(() => {
   providePools();
 });

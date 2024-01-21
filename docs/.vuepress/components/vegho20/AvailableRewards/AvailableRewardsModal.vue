@@ -1,53 +1,37 @@
-<script>
-export default {
-  props: {
-    type: String,
-    claim: Array,
-  },
-  emits: ['close'],
-  methods: {
-    onClose() {
-      this.$emit('close');
-    },
-  },
+<script setup lang="ts">
+import { defineProps } from 'vue';
+
+type RewardDistributionType = {
+  token: string;
+  amount: string;
 };
+
+type ModalPropsType = {
+  open: boolean;
+  onClose: () => void;
+  rewards: RewardDistributionType[];
+};
+
+const props = defineProps<ModalPropsType>();
 </script>
 
 <template>
-  <div v-if="type === 'lock'" class="modal-container">
-    <div class="modal-popup lock">
-      <article class="item-row">
-        <p class="item-name">Underlying ve8020GHO BPT Amount</p>
-        <p class="item-value">12000</p>
-      </article>
-      <article class="item-row">
-        <p class="item-name">Release time</p>
-        <p class="item-value">12:53 03/06/2025</p>
-      </article>
-      <div class="btn-group">
-        <button class="btn submit">Submit tx</button>
-        <button class="btn close" @click="onClose">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <div v-else-if="type === 'claim'" class="modal-container">
+  <div v-if="props.open" class="modal-container">
     <div class="modal-popup claim">
       <div class="head">
         <div class="item-row">
           <p class="item-name">Token</p>
-          <p class="item-value">Claimable Amount</p>
+          <p class="item-value">Distribution Rewards</p>
         </div>
       </div>
       <div class="body">
-        <div v-for="item in claim" :key="item.token" class="item-row">
+        <div v-for="item in rewards" :key="item.token" class="item-row">
           <p class="item-name">{{ item.token }}</p>
-          <p class="item-value">{{ item.claimable }}</p>
+          <p class="item-value">{{ item.amount }}</p>
         </div>
       </div>
       <div class="btn-group">
-        <button class="btn submit">Submit tx</button>
-        <button class="btn close" @click="onClose">Close</button>
+        <button class="btn close" @click="props.onClose">Close</button>
       </div>
     </div>
   </div>
